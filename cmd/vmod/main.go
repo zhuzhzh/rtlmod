@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"github.com/zhuzhzh/vmod/internal/text"
+	"github.com/zhuzhzh/vmod/internal/vtext"
 )
 
 var helptext string = `[config file]:
@@ -171,7 +171,7 @@ func main() {
 
 			if tofile {
 				// create log directory
-				if err = text.CreateOutputDir("log"); err != nil {
+				if err = vtext.CreateOutputDir("log"); err != nil {
 					panic(err)
 				}
 
@@ -189,7 +189,7 @@ func main() {
 			// Set the log level
 			log.SetLevel(level)
 
-			text.ProcessFiles(configFile, fileList, outDir)
+			vtext.ProcessFiles(configFile, fileList, outDir)
 
 			return nil
 		},

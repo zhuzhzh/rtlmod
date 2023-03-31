@@ -1,4 +1,4 @@
-package text
+package vtext
 
 import (
 	"encoding/json"
