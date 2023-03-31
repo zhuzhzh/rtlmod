@@ -18,7 +18,7 @@ release rel:
 	go build -o ${EXEC} ${SRCS}
 
 r run: 
-	${EXEC} -c tests/config.json -f tests/filelist.f -o out --verbose ${VERB} ${REDIRECT}
+	${EXEC} -c test/config.json -f test/filelist.f -o out --verbose ${VERB} ${REDIRECT}
 
 
 .PHONY: b r rel
