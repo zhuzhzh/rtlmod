@@ -1,5 +1,12 @@
 EXEC = ./bin/vmod
 SRCS := ./cmd/vmod/main.go 
+TOFILE := 1
+VERB := info
+ifeq (1, ${TOFILE})
+	REDIRECT := --tofile
+else
+	REDIRECT :=
+endif
 
 echo:
 	@echo ${SRCS}
@@ -11,7 +18,7 @@ release rel:
 	go build -o ${EXEC} ${SRCS}
 
 r run: 
-	${EXEC} -c tests/config.json -f tests/filelist.f -o out
+	${EXEC} -c tests/config.json -f tests/filelist.f -o out --verbose ${VERB} ${REDIRECT}
 
 
 .PHONY: b r rel
