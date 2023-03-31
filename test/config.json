@@ -1,7 +1,7 @@
 {
   "opcode": [
-		  { "op": "replace", "begin": "primitive udp_dff", "end": "endprimitive", "src": "./tests/udp_dff.v"},
-		  { "op": "replace", "begin": "primitive udp_sedfft", "end": "endprimitive", "src": "./tests/udp_sedfft.v"},
+		  { "op": "replace", "begin": "primitive udp_dff", "end": "endprimitive", "src": "./test/udp_dff.v"},
+		  { "op": "replace", "begin": "primitive udp_sedfft", "end": "endprimitive", "src": "./test/udp_sedfft.v"},
 		  { "op": "dummy", "begin": "module and001", "end": "endmodule", "src": ""},
 		  { "op": "remove", "begin": "module or001", "end": "endmodule", "src": ""},
 		  { "op": "deleteline", "begin": "celldefine", "end": "", "src": ""}
