@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/zhuzhzh/vmod/internal/helper"
 )
 
 type Config struct {
@@ -189,16 +189,6 @@ func readFiles(fileList string) ([]string, error) {
 	return files, nil
 }
 
-func CreateOutputDir(outDir string) error {
-	if _, err := os.Stat(outDir); os.IsNotExist(err) {
-		err = os.MkdirAll(outDir, 0755)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func ProcessFiles(configFile, fileList, outDir string) {
 	var (
 		config Config
@@ -235,7 +225,7 @@ func ProcessFiles(configFile, fileList, outDir string) {
 		"outDir": outDir,
 	}).Debug("Creating output directory")
 
-	if err = CreateOutputDir(outDir); err != nil {
+	if err = helper.CreateOutputDir(outDir); err != nil {
 		log.WithFields(log.Fields{
 			"outDir": outDir,
 			"error":  err,
