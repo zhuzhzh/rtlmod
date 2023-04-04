@@ -15,10 +15,22 @@ Here is the <begin> keyword.
 /* aaa
 <end> bbb
 */
+And here is the <end> keyword.
+Here is the <begin> keyword.
+// <end> keyword
+/* aaa
+<end> bbb
+*/
 And here is the <end> keyword.`
 	t.Logf("text = \n%s\n", text)
 
-	beginIndex, endIndex := findBeginEnd(text, "<begin>", "<end>")
+	beginIndex := 0
+	endIndex := 0
+
+	for (beginIndex != -1) && (endIndex != -1) {
+		beginIndex, endIndex = findBeginEnd(text[endIndex:], "<begin>", "<end>")
+		t.Logf("beginIndex = %d, endIndex = %d\n", beginIndex, endIndex)
+	}
 
 	expectBegin := 134
 	expectEnd := 209
