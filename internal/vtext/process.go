@@ -20,7 +20,16 @@ type Config struct {
 	} `json:"opcode"`
 }
 
-func findBeginEnd(text, begin, end string) (int, int) {
+type pIndex struct {
+	beginIndex int
+	endIndex   int
+}
+
+type func SingleParamFunc func(files []string, kw string) (string, error)
+type func TwoParamFunc func(files []string, bw string, ew string) (string, error)
+type func ThreeParamFunc func(files []string, bw string, ew string, subst string) (string, error)
+
+func findFirstBeginEnd(text, begin, end string) (int, int) {
 	log.WithFields(log.Fields{
 		"text":  text,
 		"begin": begin,
@@ -87,32 +96,93 @@ func findBeginEnd(text, begin, end string) (int, int) {
 	return -1, -1
 }
 
-func removeAction(fileContent string, begin string, end string) (string, error) {
+// findAllBeginEnd searches for pairs of beginword and endword in the text.
+// The function skips over line and block comments during the search.
+// endword should be the first one following beginword tightly.
+func findAllBeginEnd(text, beginword, endword string) []pIndex {
+	var res []pIndex
+	var i int
+	for i < len(text) {
+		if text[i] == '/' && i+1 < len(text) && text[i+1] == '/' {
+			log.Debug("Skipping line comment")
+			i = skipLineComment(text, i)
+		} else if text[i] == '/' && i+1 < len(text) && text[i+1] == '*' {
+			log.Debug("Skipping block comment")
+			i = skipBlockComment(text, i)
+		} else if strings.HasPrefix(text[i:], beginword) {
+			log.Debugf("Found beginword at index %d", i)
+			j := i + len(beginword)
+			for j < len(text) {
+				if text[j] == '/' && j+1 < len(text) && text[j+1] == '/' {
+					log.Debug("Skipping line comment")
+					j = skipLineComment(text, j)
+				} else if text[j] == '/' && j+1 < len(text) && text[j+1] == '*' {
+					log.Debug("Skipping block comment")
+					j = skipBlockComment(text, j)
+				} else if strings.HasPrefix(text[j:], endword) {
+					log.Debugf("Found endword at index %d", j)
+					break
+				} else {
+					j++
+				}
+			}
+			if j < len(text) && strings.HasPrefix(text[j:], endword) {
+				res = append(res, pIndex{i, j + len(endword)})
+				i = j + len(endword)
+			} else {
+				i = j
+			}
+		} else {
+			i++
+		}
+	}
+	return res
+}
+
+// skipLineComment skips over a line comment starting at index i in the text.
+func skipLineComment(text string, i int) int {
+	for i < len(text) && text[i] != '\n' {
+		i++
+	}
+	return i
+}
+
+// skipBlockComment skips over a block comment starting at index i in the text.
+func skipBlockComment(text string, i int) int {
+	for i < len(text)-1 && !(text[i] == '*' && text[i+1] == '/') {
+		i++
+	}
+	return i + 2
+}
+
+func removeText(input string, keyword string, p []pIndex) (output string) {
+	var start int
+	for _, pair := range p {
+		output += input[start:pair.beginIndex]
+		output += ("// remove " + keyword + "\n")
+		start = pair.endIndex
+	}
+	output += input[start:]
+	return
+}
+
+func RemoveAction(fileContent string, begin string, end string) (string, error) {
 	log.WithFields(log.Fields{
 		"begin": begin,
 		"end":   end,
 	}).Debug("Removing content between begin and end indices")
 
-	beginIndex, endIndex := findBeginEnd(fileContent, begin, end)
-	var newContent string
-	if beginIndex != -1 && endIndex != -1 {
-		newContent = fileContent[:beginIndex] + "// remove " + begin + "\n" + fileContent[endIndex:]
-	} else {
-		newContent = fileContent
-	}
+	occurs := findAllBeginEnd(fileContent, begin, end)
+	newContent := removeText(fileContent, begin+"..."+end, occurs)
 	return newContent, nil
 }
 
-func dummyAction(fileContent string, begin string, end string) (string, error) {
-	log.WithFields(log.Fields{
-		"begin": begin,
-		"end":   end,
-	}).Debug("Dummying content between begin and end indices")
+func dummyText(input string, keyword string, p []pIndex) (output string) {
+	var start int
+	for _, pair := range p {
+		output += input[start:pair.beginIndex]
 
-	beginIndex, endIndex := findBeginEnd(fileContent, begin, end)
-	var newContent string
-	if beginIndex != -1 && endIndex != -1 {
-		moduleContent := fileContent[beginIndex:endIndex]
+		moduleContent := input[pair.beginIndex:pair.endIndex]
 		lines := strings.Split(moduleContent, "\n")
 		newLines := []string{}
 		for _, line := range lines {
@@ -120,34 +190,53 @@ func dummyAction(fileContent string, begin string, end string) (string, error) {
 				newLines = append(newLines, line)
 			}
 		}
-		newContent = fileContent[:beginIndex] + "// dummy " + begin + "\n" + strings.Join(newLines, "\n") + fileContent[endIndex:]
-	} else {
-		newContent = fileContent
+		output += ("// dummy " + keyword + "\n")
+		output += strings.Join(newLines, "\n")
+		start = pair.endIndex
 	}
+	output += input[start:]
+	return
+}
+
+func DummyAction(fileContent string, begin string, end string) (string, error) {
+	log.WithFields(log.Fields{
+		"begin": begin,
+		"end":   end,
+	}).Debug("Dummying content between begin and end indices")
+
+	occurs := findAllBeginEnd(fileContent, begin, end)
+	newContent := dummyText(fileContent, begin+"..."+end, occurs)
 	return newContent, nil
 }
 
-func replaceAction(fileContent string, src string, begin string, end string) (string, error) {
+func replaceText(input string, repl string, keyword string, p []pIndex) (output string) {
+	var start int
+	for _, pair := range p {
+		output += input[start:pair.beginIndex]
+		output += ("// replace " + keyword + "\n")
+		output += repl
+		start = pair.endIndex
+	}
+	output += input[start:]
+	return
+}
+
+func ReplaceAction(fileContent string, replFile string, begin string, end string) (string, error) {
 	log.WithFields(log.Fields{
 		"begin": begin,
 		"end":   end,
 	}).Debug("Replacing content between begin and end indices")
 
-	srcData, err := ioutil.ReadFile(src)
+	srcData, err := ioutil.ReadFile(replFile)
 	if err != nil {
 		panic(err)
 	}
-	var newContent string
-	beginIndex, endIndex := findBeginEnd(fileContent, begin, end)
-	if beginIndex != -1 && endIndex != -1 {
-		newContent = fileContent[:beginIndex] + "// replace " + begin + "\n" + string(srcData) + fileContent[endIndex:]
-	} else {
-		newContent = fileContent
-	}
+	occurs := findAllBeginEnd(fileContent, begin, end)
+	newContent := replaceText(fileContent, string(srcData), begin, occurs)
 	return newContent, nil
 }
 
-func deletelineAction(fileContent string, begin string) string {
+func DeletelineAction(fileContent string, begin string) (string, error) {
 	log.WithFields(log.Fields{
 		"begin": begin,
 	}).Debug("deleting the line containing the key word")
@@ -161,7 +250,7 @@ func deletelineAction(fileContent string, begin string) string {
 			newLines += fmt.Sprintf("// remove the line %s\n", begin)
 		}
 	}
-	return newLines
+	return newLines, nil
 }
 
 func readConfig(configFile string) (Config, error) {
@@ -179,21 +268,105 @@ func readConfig(configFile string) (Config, error) {
 	return config, nil
 }
 
-func readFiles(fileList string) ([]string, error) {
-	filesData, err := ioutil.ReadFile(fileList)
-	if err != nil {
-		return nil, err
+func ActionHelper(files []string, bw string, ew string, repl string, outDir string, funcHelper interface{}, funcDesc string) {
+	var (
+		err error
+		wg  sync.WaitGroup
+	)
+	log.WithFields(log.Fields{
+		"outDir": outDir,
+	}).Debug("Creating output directory")
+
+	if err = helper.CreateOutputDir(outDir); err != nil {
+		log.WithFields(log.Fields{
+			"outDir": outDir,
+			"error":  err,
+		}).Error("Error creating output directory")
+		return
 	}
 
-	files := strings.Split(string(filesData), "\n")
-	return files, nil
+	for _, file := range files {
+		if file == "" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(file string) {
+			defer wg.Done()
+			log.WithFields(log.Fields{
+				"file": file,
+			}).Debug("Processing file")
+			fileData, err := ioutil.ReadFile(file)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"file":  file,
+					"error": err,
+				}).Error("Error reading file")
+				return
+			}
+
+			fileContent := string(fileData)
+
+			var newContent string
+
+			switch f := funcHelper.(type) {
+			case SingleParamFunc:
+				newContent, err = f(fileContent, bw)
+			case TwoParamFunc:
+				newContent, err = f(fileContent, bw, ew)
+			case ThreeParamFunc:
+				newContent, err = f(fileContent, bw, ew, repl)
+			default:
+				log.Error("Unsupported function type")
+				return
+			}
+
+			if err != nil {
+				log.WithFields(log.Fields{
+					"op":     op,
+					"error":  err,
+					"action": funcDesc,
+				}).Error("Error processing content")
+				continue
+			}
+			fileContent = newContent
+			outPath := outDir + "/" + file[strings.LastIndex(file, "/")+1:]
+			log.WithFields(log.Fields{
+				"outPath": outPath,
+			}).Debug("Writing modified content to output directory")
+			err = ioutil.WriteFile(outPath, []byte(fileContent), 0644)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"outPath": outPath,
+					"error":   err,
+				}).Error("Error writing modified content to output directory")
+				return
+			}
+		}(file)
+	}
+	wg.Wait()
 }
 
-func ProcessFiles(configFile, fileList, outDir string) {
+func RemoveHelper(files []string, bw string, ew string, outDir string)  {
+	ActionHelper(files, bw, ew, "", outDir, RemoveAction, "remove")
+}
+
+func DeleteLineHelper(files []string, kw string, outDir string)  {
+	ActionHelper(files, kw, "", "", outDir, DeletelineAction, "delete line")
+}
+
+func DummyHelper(files []string, bw string, ew string, outDir string)  {
+	ActionHelper(files, bw, ew, "", outDir, DummyAction, "dummy")
+}
+
+func ReplaceHelper(files []string, bw string, ew string, repl string, outDir string) {
+	ActionHelper(files, bw, ew, repl, outDir, ReplaceAction, "replace")
+}
+
+func ProcessFiles(configFile string, files []string, outDir string) {
 	var (
 		config Config
 		err    error
-		files  []string
 		wg     sync.WaitGroup
 	)
 
@@ -206,18 +379,6 @@ func ProcessFiles(configFile, fileList, outDir string) {
 			"configFile": configFile,
 			"error":      err,
 		}).Error("Error reading config file")
-		return
-	}
-
-	log.WithFields(log.Fields{
-		"fileList": fileList,
-	}).Debug("Reading file list")
-
-	if files, err = readFiles(fileList); err != nil {
-		log.WithFields(log.Fields{
-			"fileList": fileList,
-			"error":    err,
-		}).Error("Error reading file list")
 		return
 	}
 
@@ -258,7 +419,7 @@ func ProcessFiles(configFile, fileList, outDir string) {
 			for _, op := range config.Opcode {
 				switch op.Op {
 				case "replace":
-					newContent, err := replaceAction(fileContent, op.Src, op.Begin, op.End)
+					newContent, err := ReplaceAction(fileContent, op.Src, op.Begin, op.End)
 					if err != nil {
 						log.WithFields(log.Fields{
 							"op":     op,
@@ -269,7 +430,7 @@ func ProcessFiles(configFile, fileList, outDir string) {
 					}
 					fileContent = newContent
 				case "dummy":
-					newContent, err := dummyAction(fileContent, op.Begin, op.End)
+					newContent, err := DummyAction(fileContent, op.Begin, op.End)
 					if err != nil {
 						log.WithFields(log.Fields{
 							"op":     op,
@@ -280,7 +441,7 @@ func ProcessFiles(configFile, fileList, outDir string) {
 					}
 					fileContent = newContent
 				case "remove":
-					newContent, err := removeAction(fileContent, op.Begin, op.End)
+					newContent, err := RemoveAction(fileContent, op.Begin, op.End)
 					if err != nil {
 						log.WithFields(log.Fields{
 							"op":     op,
@@ -291,7 +452,7 @@ func ProcessFiles(configFile, fileList, outDir string) {
 					}
 					fileContent = newContent
 				case "deleteline":
-					newContent := deletelineAction(fileContent, op.Begin)
+					newContent := DeletelineAction(fileContent, op.Begin)
 					fileContent = newContent
 				default:
 					fmt.Printf("Unknown opcode: %s\n", op.Op)
