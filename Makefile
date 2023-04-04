@@ -1,5 +1,5 @@
-EXEC = ./bin/vmod
-SRCS := ./cmd/vmod/main.go 
+EXEC = ./bin/rtlmod
+SRCS := ./cmd/rtlmod/main.go 
 TOFILE := 1
 VERB := info
 ifeq (1, ${TOFILE})

@@ -3,7 +3,7 @@
 ## demo
 
 ```shell
-vmod demo
+rtlmod demo
 ```
 
 Generate the demo files
