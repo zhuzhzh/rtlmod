@@ -40,30 +40,37 @@ func main() {
 				},
 			},
 			{
-				// add command dummy
+				// add command replace
 				// flag : -f <file list>
 				// flag : -o <output directory>
 				// flag : -bw <begin word>
 				// flag : -ew <end word>
+				// flag : -r <subst file>
 				Name:  "replace",
-				Usage: "Usage: <program> replace -f <file list> -o <out dir> -bw <begin word> -ew <end word> [--verbose <level>] [-tofile] <files1> <file2> ...",
+				Usage: "Usage: <program> replace -f <file list> -o <out dir> -bw <begin word> -ew <end word> -r <sutst file> [--verbose <level>] [-tofile] <files1> <file2> ...",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "bw",
 						Value:    "begin",
-						Usage:    "begin word,
+						Usage:    "begin word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "ew",
 						Value:    "end",
-						Usage:    "end word,
+						Usage:    "end word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "f",
 						Value:    "filelist",
 						Usage:    "file list",
+						Required: false,
+					},
+					&cli.StringFlag{
+						Name:     "r",
+						Value:    "repl.v",
+						Usage:    "substitution file",
 						Required: true,
 					},
 					&cli.StringFlag{
@@ -86,6 +93,7 @@ func main() {
 				Action: func(c *cli.Context) error {
 					bw := c.String("bw")
 					ew := c.String("ew")
+					repl := c.String("r")
 					fileList := c.String("f")
 					outDir := c.String("o")
 					tofile := c.Bool("tofile")
@@ -118,15 +126,15 @@ func main() {
 					log.SetLevel(level)
 
 					if fileFromLists, err := helper.ReadFiles(fileList); err != nil {
-						fmt.Printf("can not open %s\n", fileList)
+						//fmt.Printf("can not open %s\n", fileList)
 					} else {
 						files = append(files, fileFromLists...)
 					}
 
 					vtext.ReplaceHelper(files, bw, ew, repl, outDir)
 					return nil
-				}
-			}，
+				},
+			},
 			{
 				// add command dummy
 				// flag : -f <file list>
@@ -139,20 +147,20 @@ func main() {
 					&cli.StringFlag{
 						Name:     "bw",
 						Value:    "begin",
-						Usage:    "begin word,
+						Usage:    "begin word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "ew",
 						Value:    "end",
-						Usage:    "end word,
+						Usage:    "end word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "f",
 						Value:    "filelist",
 						Usage:    "file list",
-						Required: true,
+						Required: false,
 					},
 					&cli.StringFlag{
 						Name:     "o",
@@ -206,15 +214,15 @@ func main() {
 					log.SetLevel(level)
 
 					if fileFromLists, err := helper.ReadFiles(fileList); err != nil {
-						fmt.Printf("can not open %s\n", fileList)
+						//fmt.Printf("can not open %s\n", fileList)
 					} else {
 						files = append(files, fileFromLists...)
 					}
 
 					vtext.DummyHelper(files, bw, ew, outDir)
 					return nil
-
-			}，
+				},
+			},
 			{
 				// add command remove
 				// flag : -f <file list>
@@ -228,20 +236,20 @@ func main() {
 					&cli.StringFlag{
 						Name:     "bw",
 						Value:    "begin",
-						Usage:    "begin word,
+						Usage:    "begin word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "ew",
 						Value:    "end",
-						Usage:    "end word,
+						Usage:    "end word",
 						Required: true,
 					},
 					&cli.StringFlag{
 						Name:     "f",
 						Value:    "filelist",
 						Usage:    "file list",
-						Required: true,
+						Required: false,
 					},
 					&cli.StringFlag{
 						Name:     "o",
@@ -295,15 +303,15 @@ func main() {
 					log.SetLevel(level)
 
 					if fileFromLists, err := helper.ReadFiles(fileList); err != nil {
-						fmt.Printf("can not open %s\n", fileList)
+						//fmt.Printf("can not open %s\n", fileList)
 					} else {
 						files = append(files, fileFromLists...)
 					}
 
 					vtext.RemoveHelper(files, bw, ew, outDir)
 					return nil
-
-			}，
+				},
+			},
 			{
 				// add command deleteline
 				// flag : -f <file list>
@@ -324,7 +332,7 @@ func main() {
 						Name:     "f",
 						Value:    "filelist",
 						Usage:    "file list",
-						Required: true,
+						Required: false,
 					},
 					&cli.StringFlag{
 						Name:     "o",
@@ -377,15 +385,15 @@ func main() {
 					log.SetLevel(level)
 
 					if fileFromLists, err := helper.ReadFiles(fileList); err != nil {
-						fmt.Printf("can not open %s\n", fileList)
+						//fmt.Printf("can not open %s\n", fileList)
 					} else {
 						files = append(files, fileFromLists...)
 					}
 
-					vtext.DeletelineHelper(files, kw, outDir)
+					vtext.DeleteLineHelper(files, kw, outDir)
 					return nil
-
-			}，
+				},
+			},
 			{
 				Name:  "chain",
 				Usage: "Usage: <program> chain -c <json> -f <file list> -o <out dir> [--verbose <level>] [-tofile]",
@@ -400,7 +408,7 @@ func main() {
 						Name:     "f",
 						Value:    "filelist",
 						Usage:    "file list",
-						Required: true,
+						Required: false,
 					},
 					&cli.StringFlag{
 						Name:     "o",
@@ -453,7 +461,7 @@ func main() {
 					log.SetLevel(level)
 
 					if fileFromLists, err := helper.ReadFiles(fileList); err != nil {
-						fmt.Printf("can not open %s\n", fileList)
+						//fmt.Printf("can not open %s\n", fileList)
 					} else {
 						files = append(files, fileFromLists...)
 					}

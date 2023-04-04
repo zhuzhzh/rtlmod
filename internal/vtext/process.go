@@ -25,9 +25,9 @@ type pIndex struct {
 	endIndex   int
 }
 
-type func SingleParamFunc func(files []string, kw string) (string, error)
-type func TwoParamFunc func(files []string, bw string, ew string) (string, error)
-type func ThreeParamFunc func(files []string, bw string, ew string, subst string) (string, error)
+type TwoParamFunc func(string, string) (string, error)
+type ThreeParamFunc func(string, string, string) (string, error)
+type FourParamFunc func(string, string, string, string) (string, error)
 
 func findFirstBeginEnd(text, begin, end string) (int, int) {
 	log.WithFields(log.Fields{
@@ -73,7 +73,7 @@ func findFirstBeginEnd(text, begin, end string) (int, int) {
 								"end":        end,
 								"beginIndex": beginIndex,
 								"endIndex":   j + len(end),
-							}).Debug("can't find the begin")
+							}).Debug("can not find the begin")
 							return beginIndex, j + len(end)
 						}
 					}
@@ -198,14 +198,14 @@ func dummyText(input string, keyword string, p []pIndex) (output string) {
 	return
 }
 
-func DummyAction(fileContent string, begin string, end string) (string, error) {
+func DummyAction(fileContent string, bw string, ew string) (string, error) {
 	log.WithFields(log.Fields{
-		"begin": begin,
-		"end":   end,
+		"begin": bw,
+		"end":   ew,
 	}).Debug("Dummying content between begin and end indices")
 
-	occurs := findAllBeginEnd(fileContent, begin, end)
-	newContent := dummyText(fileContent, begin+"..."+end, occurs)
+	occurs := findAllBeginEnd(fileContent, bw, ew)
+	newContent := dummyText(fileContent, bw+"..."+ew, occurs)
 	return newContent, nil
 }
 
@@ -310,24 +310,23 @@ func ActionHelper(files []string, bw string, ew string, repl string, outDir stri
 			var newContent string
 
 			switch f := funcHelper.(type) {
-			case SingleParamFunc:
-				newContent, err = f(fileContent, bw)
 			case TwoParamFunc:
-				newContent, err = f(fileContent, bw, ew)
+				newContent, err = f(fileContent, bw)
 			case ThreeParamFunc:
+				newContent, err = f(fileContent, bw, ew)
+			case FourParamFunc:
 				newContent, err = f(fileContent, bw, ew, repl)
 			default:
-				log.Error("Unsupported function type")
+				log.Errorf("Unsupported function type %T", f)
 				return
 			}
 
 			if err != nil {
 				log.WithFields(log.Fields{
-					"op":     op,
 					"error":  err,
 					"action": funcDesc,
 				}).Error("Error processing content")
-				continue
+				return
 			}
 			fileContent = newContent
 			outPath := outDir + "/" + file[strings.LastIndex(file, "/")+1:]
@@ -347,20 +346,20 @@ func ActionHelper(files []string, bw string, ew string, repl string, outDir stri
 	wg.Wait()
 }
 
-func RemoveHelper(files []string, bw string, ew string, outDir string)  {
-	ActionHelper(files, bw, ew, "", outDir, RemoveAction, "remove")
+func RemoveHelper(files []string, bw string, ew string, outDir string) {
+	ActionHelper(files, bw, ew, "", outDir, ThreeParamFunc(RemoveAction), "remove")
 }
 
-func DeleteLineHelper(files []string, kw string, outDir string)  {
-	ActionHelper(files, kw, "", "", outDir, DeletelineAction, "delete line")
+func DeleteLineHelper(files []string, kw string, outDir string) {
+	ActionHelper(files, kw, "", "", outDir, TwoParamFunc(DeletelineAction), "delete line")
 }
 
-func DummyHelper(files []string, bw string, ew string, outDir string)  {
-	ActionHelper(files, bw, ew, "", outDir, DummyAction, "dummy")
+func DummyHelper(files []string, bw string, ew string, outDir string) {
+	ActionHelper(files, bw, ew, "", outDir, ThreeParamFunc(DummyAction), "dummy")
 }
 
 func ReplaceHelper(files []string, bw string, ew string, repl string, outDir string) {
-	ActionHelper(files, bw, ew, repl, outDir, ReplaceAction, "replace")
+	ActionHelper(files, bw, ew, repl, outDir, FourParamFunc(ReplaceAction), "replace")
 }
 
 func ProcessFiles(configFile string, files []string, outDir string) {
@@ -452,7 +451,7 @@ func ProcessFiles(configFile string, files []string, outDir string) {
 					}
 					fileContent = newContent
 				case "deleteline":
-					newContent := DeletelineAction(fileContent, op.Begin)
+					newContent, _ := DeletelineAction(fileContent, op.Begin)
 					fileContent = newContent
 				default:
 					fmt.Printf("Unknown opcode: %s\n", op.Op)
