@@ -466,7 +466,7 @@ func main() {
 						files = append(files, fileFromLists...)
 					}
 
-					vtext.ProcessFiles(configFile, files, outDir)
+					vtext.ChainHelper(configFile, files, outDir)
 					return nil
 				},
 			},

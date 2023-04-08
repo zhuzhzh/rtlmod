@@ -346,12 +346,12 @@ func ActionHelper(files []string, bw string, ew string, repl string, outDir stri
 	wg.Wait()
 }
 
-func RemoveHelper(files []string, bw string, ew string, outDir string) {
-	ActionHelper(files, bw, ew, "", outDir, ThreeParamFunc(RemoveAction), "remove")
-}
-
 func DeleteLineHelper(files []string, kw string, outDir string) {
 	ActionHelper(files, kw, "", "", outDir, TwoParamFunc(DeletelineAction), "delete line")
+}
+
+func RemoveHelper(files []string, bw string, ew string, outDir string) {
+	ActionHelper(files, bw, ew, "", outDir, ThreeParamFunc(RemoveAction), "remove")
 }
 
 func DummyHelper(files []string, bw string, ew string, outDir string) {
@@ -362,7 +362,7 @@ func ReplaceHelper(files []string, bw string, ew string, repl string, outDir str
 	ActionHelper(files, bw, ew, repl, outDir, FourParamFunc(ReplaceAction), "replace")
 }
 
-func ProcessFiles(configFile string, files []string, outDir string) {
+func ChainHelper(configFile string, files []string, outDir string) {
 	var (
 		config Config
 		err    error
