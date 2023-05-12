@@ -3,6 +3,10 @@
 ## Overview
 
 This program is used to handle the RTL files.
+
+Most actions will be taken on the text between <begin_word> and the <end_word>. This is very useful on RTL code.
+For example, I want to add one line on module foo, then you could define <begin_word> as module foo, and <end_word> as endmodule.
+
 Here is the supported actions.
 
 - **replace**: replace one block starting from the keyword <begin_word> to the keyword <end_word> with another file
